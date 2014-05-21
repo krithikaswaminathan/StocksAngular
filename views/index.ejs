@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title></title>
+      <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,300,600' rel='stylesheet' type='text/css'>
+
+      <style>
+          body{
+              font: 300 1em 'Open Sans';
+              background-color: #d1ff7d;
+              color: black;
+          }
+          h1 {
+
+          }
+          span.quote_info{
+              display: inline-block;
+              margin: 0.25em;
+              padding: 0.25em 0.75em;
+              border: 1px solid gray;
+          }
+
+          #search {
+              display: block;
+              margin: 0 auto;
+          }
+
+          .span_class{
+              display: inline-block;
+
+              padding: 0.25em 0.75em;
+              border: 1px solid gray;
+          }
+
+          #popup{
+              display: none;
+              background-color: rgba(0,0,0,0.9);
+              color: white;
+              width:      100%;
+              height:     100%;
+              z-index:    10;
+              top:        0;
+              left:       0;
+              position:   fixed;
+              padding:    3em;
+          }
+
+          #display_inside{
+              color: white;
+              width: 60%;
+              margin: 0 auto;
+              text-align: left;
+              padding: 1em;
+              border: 1px solid white;
+          }
+
+      </style>
+      <script src="/bower_components/jquery/dist/jquery.js"></script>
+    
+      <script>
+
+          function popup(evt, obj){
+              var popup = document.getElementById('popup');
+              popup.style.display = 'block';
+
+              var display_div = document.getElementById('display_inside');
+              display_div.innerHTML = '';
+              for (var prop in obj.query.results.quote){
+                  display_div.innerHTML += '<br/>' + prop + " : " + obj.query.results.quote[prop];
+              }
+
+          }
+
+            $(function() {
+
+
+                // Search is the id of the search box. We start from this.
+                document.getElementById('search').onkeydown = function(evt){
+                    if (evt.keyCode == 13){
+                        console.log(evt.target.value);
+                        getQuote(evt.target.value);
+                    }
+                };
+
+                // event registration for popup
+                var popup = document.getElementById('popup');
+                var inner_div = document.getElementById('display_inside');
+
+                // you do not want the inner div to close if the outer div closes.  So for that you
+                // have to stop event propagation.
+                inner_div.onclick = function(evt){
+                    evt.preventDefault();
+                    evt.stopImmediatePropagation();
+                    return false;
+                }
+
+                popup.onclick = function(){
+                    popup.style.display = 'none';
+                }
+            });
+
+            function getQuote(symbol){
+
+                        var url = 'http://query.yahooapis.com/v1/public/yql';
+                        var data = "select * from yahoo.finance.quotes where symbol in ('" + symbol + "')";
+                        var query =  'q=' + encodeURI(data) + "&format=json&diagnostics=true&env=http://datatables.org/alltables.env";
+                        var finalurl = url + '?' + query;
+
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('GET', finalurl);
+                        xhr.onreadystatechange = function() {
+                            if (xhr.readyState === 4 && xhr.status === 200) {
+                                var obj = JSON.parse(xhr.responseText);
+                                displayStock(obj);
+                            }
+                        };
+
+                        xhr.send();
+
+            }
+
+            function displayStock(obj){
+
+
+                        console.dir (obj);
+
+                        var quote = obj.query.results.quote;
+                        var name = obj.query.results.quote.Name;
+                        var div1 = document.createElement('div');
+                        div1.innerHTML = name;
+
+
+                        var stockSymbol =obj.query.results.quote.Symbol;
+                        var created = obj.query.created;
+                        var div2 = document.createElement('div');
+                        div2.innerHTML = 'NASDAQ:' + stockSymbol + ' ' + (new Date(created)).toString();
+
+                        var price = obj.query.results.quote.LastTradePriceOnly;
+                        var changeinPercent = obj.query.results.quote.Change_PercentChange;
+
+                        var span1 = document.createElement('span');
+                        span1.innerHTML =  price + ' ' + changeinPercent;
+
+                        var div3 = document.createElement('div');
+                        var open = obj.query.results.quote.Open;
+                        var open_span = document.createElement('span');
+                        open_span.innerHTML =  "Open: " + open;
+                        open_span.className = "span_class";
+
+                        var high = obj.query.results.quote.DaysHigh;
+                        var high_span = document.createElement('span');
+                        high_span.innerHTML =  "High: " + high;
+                        high_span.className = "span_class";
+
+                        var low = obj.query.results.quote.DaysLow;
+                        var low_span = document.createElement('span');
+                        low_span.innerHTML =  "Low: " + low;
+                        low_span.className = "span_class";
+
+                        var marketCap = obj.query.results.quote.MarketCapitalization;
+                        var cap_span = document.createElement('span');
+                        cap_span.innerHTML =  "Mkt Cap: " + marketCap;
+                        cap_span.className = "span_class";
+
+                        var peRatio = obj.query.results.quote.PERatio;
+                        var pe_span = document.createElement('span');
+                        pe_span.innerHTML =  "P/E Ratio: " + peRatio;
+                        pe_span.className = "span_class";
+
+                        var divYield = obj.query.results.quote.DividendYield;
+                        var yld_span = document.createElement('span');
+                        yld_span.innerHTML =  "Div yield: " + divYield;
+                        yld_span.className = "span_class";
+
+                        div3.appendChild(open_span);
+                        div3.appendChild(high_span);
+                        div3.appendChild(low_span);
+                        div3.appendChild(cap_span);
+                        div3.appendChild(pe_span);
+                        div3.appendChild(yld_span);
+
+                        var main_div = document.createElement('div');
+
+                        main_div.appendChild(div1);
+                        main_div.appendChild(div2);
+                        main_div.appendChild(span1);
+                        main_div.appendChild(div3);
+
+                        var stockData = {}; // array to store the object for quick retrieval.
+                        main_div.setAttribute('data-symbol' , stockSymbol); // hidden attribute.
+                        stockData[stockSymbol] = obj; // Dump all the values of the object into the array.
+
+                        main_div.onclick = function(){
+
+                            var sym = main_div.getAttribute('data-symbol'); // Get that main object.
+                            var popup = document.getElementById('popup');
+                            popup.style.display = 'block';
+                            var obj1 = stockData[sym];// retrieve it frm the array. BIg Oh(1);
+
+                            var display_div = document.getElementById('display_inside');
+                            display_div.innerHTML = '';
+                            for (var prop in obj1.query.results.quote){
+                                display_div.innerHTML += '<br/>' + prop + " : " + obj1.query.results.quote[prop];
+                            }
+                        };
+
+                        document.body.appendChild(main_div);
+
+
+            }
+
+      </script>
+  </head>
+  <body>
+  <div id="popup" class="hidden">
+      <div id="display_inside">
+
+      </div>
+  </div>
+  <div id="input_box">
+      <h1>Enter a stock symbol please...</h1>
+      <input id="search" type="text" placeholder="stock quote.."/>
+  </div>
+
+  <div id="display">
+
+  </div>
+
+  </body>
+</html>
